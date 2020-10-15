@@ -1,0 +1,14 @@
+﻿<FileInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <File>
+    <Title>Master Zip</Title>
+    <Link>https://github.com/torvalds/linux/archive/master.zip</Link>
+  </File>
+    <File>
+    <Title>Sample PNG</Title>
+    <Link>https://demo-res.cloudinary.com/image/upload/sample.png</Link>
+  </File>
+    <File>
+    <Title>Python-3.7.0.tgz</Title>
+    <Link>https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tgz</Link>
+  </File>
+</FileInfo>

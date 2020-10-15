@@ -1,0 +1,17 @@
+﻿<Users xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <User>
+    <Id>1</Id>
+    <UserName>user1</UserName>
+    <Password>pass@123</Password>
+  </User>
+  <User>
+    <Id>2</Id>
+    <UserName>user2</UserName>
+    <Password>179456!@</Password>
+  </User>
+  <User>
+    <Id>3</Id>
+    <UserName>user3</UserName>
+    <Password>179456!@</Password>
+  </User>
+</Users>
