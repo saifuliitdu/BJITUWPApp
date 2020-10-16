@@ -128,6 +128,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Commands\LoginCommand.cs" />
     <Compile Include="Services\DownloadFileService.cs" />
+    <Compile Include="Services\Helper.cs" />
     <Compile Include="Services\UserService.cs" />
     <Compile Include="ViewModels\DownloadFileViewModel.cs" />
     <Compile Include="ViewModels\DownloadListViewModel.cs" />

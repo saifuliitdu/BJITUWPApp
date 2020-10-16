@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 
 namespace BJITUWPApp.ViewModels
@@ -19,7 +20,6 @@ namespace BJITUWPApp.ViewModels
     class DownloadFileViewModel : INotifyPropertyChanged
     {
         DownloadFileService _downloadFileService;
-        string status = "";
 
         #region INotifyPropertyChanged_Implementation
         public event PropertyChangedEventHandler PropertyChanged;
@@ -35,6 +35,22 @@ namespace BJITUWPApp.ViewModels
             _downloadFileService = new DownloadFileService();
             DownloadCmd = new DownloadCommand(Download);
             CancelCmd = new DownloadCommand(Cancel);
+            OpenCmd = new DownloadCommand(Open);
+        }
+        private StorageFile downloadedFile;
+
+        public StorageFile DownloadedFile
+        {
+            get { return downloadedFile; }
+            set { downloadedFile = value; OnPropertyChanged("DownloadedFile"); }
+        }
+
+        private string localFilePath;
+
+        public string LocalFilePath
+        {
+            get { return localFilePath; }
+            set { localFilePath = value; OnPropertyChanged("LocalFilePath"); }
         }
 
         private string fileName;
@@ -75,8 +91,21 @@ namespace BJITUWPApp.ViewModels
                 OnPropertyChanged("ButtonClickCommand");
             }
         }
-
+        //public async Task DownloadAll(string urls)
+        //{
+        //    String[] urlList = urls.Split(',');
+        //    //DownloadFileViewModel _viewModel = new DownloadFileViewModel();
+        //    foreach (var url in urlList)
+        //    {
+        //         Download(url);
+        //    }
+        //}
         public ICommand DownloadCmd
+        {
+            get;
+            private set;
+        }
+        public ICommand OpenCmd
         {
             get;
             private set;
@@ -86,22 +115,37 @@ namespace BJITUWPApp.ViewModels
             get;
             private set;
         }
-
+       
         private async void Download(string url)
         {
             ButtonText = "Cancel";
             ButtonClickCommand = CancelCmd;
 
+            var fileName = Helper.GetFileName(url);
             string fileExtension = url.Substring(url.LastIndexOf('.'));
             FolderPicker folderPicker = new FolderPicker();
             folderPicker.SuggestedStartLocation = PickerLocationId.Downloads;
             folderPicker.ViewMode = PickerViewMode.List;
             folderPicker.FileTypeFilter.Add("*");
             StorageFolder folder = await folderPicker.PickSingleFolderAsync();
-            //ProgressBar.IsIndeterminate = true;
-            bool isDownload = await _downloadFileService.Download(url, FileName, fileExtension, folder);
+            //ProgressBar.Visibility = Visibility.Visible;
+            StorageFile file = await _downloadFileService.Download(url, fileName, fileExtension, folder);
+            if (file != null)
+            {
+                downloadedFile = file;
+                localFilePath = folder.Path;
+                ButtonText = "Open";
+                ButtonClickCommand = OpenCmd;
+            }
         }
-
+        
+        private async void Open(string url)
+        {
+            await Windows.System.Launcher.LaunchFileAsync(downloadedFile);
+            // Now switch the button   
+            //ButtonText = "Download";
+            //ButtonClickCommand = DownloadCmd;
+        }
         private void Cancel(string url)
         {
             // Save your stuff here

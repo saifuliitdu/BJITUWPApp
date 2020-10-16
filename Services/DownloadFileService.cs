@@ -35,9 +35,9 @@ namespace BJITUWPApp.Services
             return _list;
         }
 
-        internal async Task<bool> Download(string url, string fileName, string fileExtension, StorageFolder folder)
+        internal async Task<StorageFile> Download(string url, string fileName, string fileExtension, StorageFolder folder)
         {
-            bool isDownload;
+            StorageFile file;
             try
             {
                 //string fileExtension = url.Substring(url.LastIndexOf('.'));
@@ -52,16 +52,15 @@ namespace BJITUWPApp.Services
                 HttpWebRequest reqst = (HttpWebRequest)WebRequest.Create(adress);
                 WebResponse reponse = await reqst.GetResponseAsync();
                 Stream stream = reponse.GetResponseStream();
-                StorageFile file = await folder.CreateFileAsync(fileName + fileExtension, CreationCollisionOption.GenerateUniqueName);
+                file = await folder.CreateFileAsync(fileName + fileExtension, CreationCollisionOption.GenerateUniqueName);
                 await Windows.Storage.FileIO.WriteBytesAsync(file, await ReadStream(stream));
-                isDownload = true;
             }
             catch(Exception ex)
             {
-                throw;
+                throw ex;
             }
 
-            return isDownload;
+            return file;
         }
 
         private async Task<byte[]> ReadStream(Stream stream)

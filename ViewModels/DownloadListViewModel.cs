@@ -7,15 +7,18 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Windows.Storage;
+using Windows.Storage.Pickers;
 
 namespace BJITUWPApp.ViewModels
 {
     class DownloadListViewModel : INotifyPropertyChanged
     {
         DownloadFileService _downloadFileService;
-        string status = "";
+        CancellationTokenSource cts;
 
         #region INotifyPropertyChanged_Implementation
         public event PropertyChangedEventHandler PropertyChanged;
@@ -32,6 +35,7 @@ namespace BJITUWPApp.ViewModels
             DownloadAllCmd = new DownloadCommand(DownloadAll);
             CancelAllCmd = new DownloadCommand(CancelAll);
             LoadFiles();
+            cts = new CancellationTokenSource();
         }
 
         private string _ButtonText;
@@ -87,25 +91,55 @@ namespace BJITUWPApp.ViewModels
         }
         #endregion
 
-        private void DownloadAll(string urls)
+        private async void DownloadAll(string urls)
         {
-            String[] animalsArray = urls.Split(',');
-            DownloadFileViewModel _viewModel = new DownloadFileViewModel();
-            foreach (var url in animalsArray)
-            {
-                _viewModel.ButtonClickCommand.Execute(url);
-            }
+            // Now switch the button   
+            ButtonText = "Downloading";
+            List<StorageFile> downloadedFiles = new List<StorageFile>();
 
-            // Add your stuff here
+            FolderPicker folderPicker = new FolderPicker();
+            folderPicker.SuggestedStartLocation = PickerLocationId.Downloads;
+            folderPicker.ViewMode = PickerViewMode.List;
+            folderPicker.FileTypeFilter.Add("*");
+            StorageFolder folder = await folderPicker.PickSingleFolderAsync();
+           
+            String[] urlList = urls.Split(',');
+            await Task.Run(() =>
+            {
+                Parallel.ForEach<string>(urlList, async (url) =>
+                {
+                    var fileName = Helper.GetFileName(url);
+                    string fileExtension = url.Substring(url.LastIndexOf('.'));
+                    StorageFile file = await _downloadFileService.Download(url, fileName, fileExtension, folder);
+                    downloadedFiles.Add(file);
+                });
+            });
+
+            //downloadedFiles.ForEach(x =>
+            //{
+            //    var modelFile = DownloadList.FirstOrDefault(f => f.Url.Equals(x.Path));
+            //    if (modelFile != null)
+            //    {
+            //        modelFile.DownloadedFile = x;
+            //        modelFile.LocalFilePath = x.Path;
+            //        modelFile.ButtonText = "Open";
+            //        modelFile.ButtonClickCommand = modelFile.OpenCmd;
+            //    }
+            //});
+
 
             // Now switch the button   
             ButtonText = "CancelAll";
             ButtonClickCommand = CancelAllCmd;
         }
-
+       
         private void CancelAll(string urls)
         {
             // Save your stuff here
+            if(cts != null)
+            {
+                cts.Cancel();
+            }
 
             // Now switch the button   
             ButtonText = "DownloadAll";
