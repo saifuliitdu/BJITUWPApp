@@ -8,7 +8,18 @@
     mc:Ignorable="d"
     xmlns:vw="using:BJITUWPApp.Views"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <!--<Page.Resources>
+        <DataTemplate x:Name="redViewTemplate" x.DataType="{x:Type viewmodels:RedViewModel}">
+            <views:RedView DataContext="{Binding}"/>
+        </DataTemplate>
+        <DataTemplate x:Name="blueViewTemplate" DataType="{x:Type viewmodels:BlueViewModel}">
+            <views:BlueView DataContext="{Binding}"/>
+        </DataTemplate>
+        <DataTemplate x:Name="orangeViewTemplate" DataType="{x:Type viewmodels:OrangeViewModel}">
+            <views:OrangeView DataContext="{Binding}"/>
+        </DataTemplate>
+    </Page.Resources>-->
     <Grid>
-        <vw:DownloadListView></vw:DownloadListView>
+        <vw:LoginView></vw:LoginView>
     </Grid>
 </Page>

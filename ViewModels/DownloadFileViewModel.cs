@@ -4,10 +4,15 @@ using BJITUWPApp.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Windows.Storage;
+using Windows.Storage.Pickers;
+using Windows.UI.Xaml.Controls;
 
 namespace BJITUWPApp.ViewModels
 {
@@ -80,17 +85,21 @@ namespace BJITUWPApp.ViewModels
         {
             get;
             private set;
-        }  
+        }
 
-        private void Download(string url)
+        private async void Download(string url)
         {
-            // Add your stuff here
-
-            // Now switch the button   
             ButtonText = "Cancel";
             ButtonClickCommand = CancelCmd;
-            //OnPropertyChanged("ButtonText");
-            //OnPropertyChanged("ButtonClickCommand");
+
+            string fileExtension = url.Substring(url.LastIndexOf('.'));
+            FolderPicker folderPicker = new FolderPicker();
+            folderPicker.SuggestedStartLocation = PickerLocationId.Downloads;
+            folderPicker.ViewMode = PickerViewMode.List;
+            folderPicker.FileTypeFilter.Add("*");
+            StorageFolder folder = await folderPicker.PickSingleFolderAsync();
+            //ProgressBar.IsIndeterminate = true;
+            bool isDownload = await _downloadFileService.Download(url, FileName, fileExtension, folder);
         }
 
         private void Cancel(string url)

@@ -15,7 +15,6 @@ namespace BJITUWPApp.ViewModels
     class DownloadListViewModel : INotifyPropertyChanged
     {
         DownloadFileService _downloadFileService;
-        DownloadFileViewModel _viewModel;
         string status = "";
 
         #region INotifyPropertyChanged_Implementation
@@ -33,8 +32,6 @@ namespace BJITUWPApp.ViewModels
             DownloadAllCmd = new DownloadCommand(DownloadAll);
             CancelAllCmd = new DownloadCommand(CancelAll);
             LoadFiles();
-            _viewModel = new DownloadFileViewModel();
-            
         }
 
         private string _ButtonText;
@@ -92,7 +89,13 @@ namespace BJITUWPApp.ViewModels
 
         private void DownloadAll(string urls)
         {
-            _viewModel.DownloadCmd.Execute(urls);
+            String[] animalsArray = urls.Split(',');
+            DownloadFileViewModel _viewModel = new DownloadFileViewModel();
+            foreach (var url in animalsArray)
+            {
+                _viewModel.ButtonClickCommand.Execute(url);
+            }
+
             // Add your stuff here
 
             // Now switch the button   

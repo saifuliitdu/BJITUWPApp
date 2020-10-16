@@ -23,7 +23,7 @@ namespace BJITUWPApp.Commands
         {
             var passwordBox = parameter as PasswordBox;
             var password = passwordBox.Password;
-            _ViewModel.Login(password);
+            _ViewModel.LoginAsync(password);
         }
     }
 }
