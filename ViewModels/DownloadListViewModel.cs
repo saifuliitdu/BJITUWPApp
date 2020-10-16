@@ -10,15 +10,20 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Windows.Networking.BackgroundTransfer;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.UI.Core;
+using Windows.UI.Popups;
+using Windows.UI.Xaml;
 
 namespace BJITUWPApp.ViewModels
 {
     class DownloadListViewModel : INotifyPropertyChanged
     {
         DownloadFileService _downloadFileService;
-        CancellationTokenSource cts;
+        CancellationTokenSource cancellationToken;
+        BackgroundDownloader backgroundDownloader = new BackgroundDownloader();
 
         #region INotifyPropertyChanged_Implementation
         public event PropertyChangedEventHandler PropertyChanged;
@@ -35,9 +40,17 @@ namespace BJITUWPApp.ViewModels
             DownloadAllCmd = new DownloadCommand(DownloadAll);
             CancelAllCmd = new DownloadCommand(CancelAll);
             LoadFiles();
-            cts = new CancellationTokenSource();
         }
-
+        private string _MessageText;
+        public string MessageText
+        {
+            get { return _MessageText; }
+            set
+            {
+                _MessageText = value;
+                OnPropertyChanged("MessageText");
+            }
+        }
         private string _ButtonText;
         public string ButtonText
         {
@@ -75,7 +88,11 @@ namespace BJITUWPApp.ViewModels
             get;
             private set;
         }
-
+        public ICommand OpenAllCmd
+        {
+            get;
+            private set;
+        }
         #region DisplayOperation
         private List<DownloadFileViewModel> downloadList;
         public List<DownloadFileViewModel> DownloadList
@@ -85,7 +102,7 @@ namespace BJITUWPApp.ViewModels
         }
         private void LoadFiles()
         {
-            var downloadFiles = _downloadFileService.GetFiles().Select(x=>new DownloadFileViewModel { FileName = x.FileName, Url = x.Url });
+            var downloadFiles = _downloadFileService.GetFiles().Select(x => new DownloadFileViewModel { FileName = x.FileName, Url = x.Url });
             DownloadList = new List<DownloadFileViewModel>(downloadFiles);
             Urls = string.Join(",", DownloadList.Select(x => x.Url));
         }
@@ -93,7 +110,6 @@ namespace BJITUWPApp.ViewModels
 
         private async void DownloadAll(string urls)
         {
-            // Now switch the button   
             ButtonText = "Downloading";
             List<StorageFile> downloadedFiles = new List<StorageFile>();
 
@@ -102,43 +118,48 @@ namespace BJITUWPApp.ViewModels
             folderPicker.ViewMode = PickerViewMode.List;
             folderPicker.FileTypeFilter.Add("*");
             StorageFolder folder = await folderPicker.PickSingleFolderAsync();
-           
+            DownloadOperation downloadOperation;
             String[] urlList = urls.Split(',');
-            await Task.Run(() =>
+            try
             {
-                Parallel.ForEach<string>(urlList, async (url) =>
+               await Task.Run(() =>
                 {
-                    var fileName = Helper.GetFileName(url);
-                    string fileExtension = url.Substring(url.LastIndexOf('.'));
-                    StorageFile file = await _downloadFileService.Download(url, fileName, fileExtension, folder);
-                    downloadedFiles.Add(file);
+                    Parallel.ForEach<string>(urlList, async (url) =>
+                    {
+                        var fileName = Helper.GetFileName(url);
+                        string fileExtension = url.Substring(url.LastIndexOf('.'));
+                        StorageFile file = await folder.CreateFileAsync(fileName, CreationCollisionOption.GenerateUniqueName);
+                        downloadOperation = backgroundDownloader.CreateDownload(new Uri(url), file);
+                        Progress<DownloadOperation> progress = new Progress<DownloadOperation>(progressChanged);
+                        cancellationToken = new CancellationTokenSource();
+                        await downloadOperation.StartAsync().AsTask(cancellationToken.Token, progress);
+                    });
                 });
-            });
 
-            //downloadedFiles.ForEach(x =>
-            //{
-            //    var modelFile = DownloadList.FirstOrDefault(f => f.Url.Equals(x.Path));
-            //    if (modelFile != null)
-            //    {
-            //        modelFile.DownloadedFile = x;
-            //        modelFile.LocalFilePath = x.Path;
-            //        modelFile.ButtonText = "Open";
-            //        modelFile.ButtonClickCommand = modelFile.OpenCmd;
-            //    }
-            //});
+                MessageText = "Visit here: "+ folder.Path;
+                ButtonText = "CancelAll";
+                ButtonClickCommand = CancelAllCmd;
+            }
+            catch (Exception ex)
+            {
 
-
-            // Now switch the button   
-            ButtonText = "CancelAll";
-            ButtonClickCommand = CancelAllCmd;
+            }
         }
-       
+        private void progressChanged(DownloadOperation downloadOperation)
+        {
+            int progress = (int)(100 * ((double)downloadOperation.Progress.BytesReceived / (double)downloadOperation.Progress.TotalBytesToReceive));
+
+            if (progress >= 100)
+            {
+                downloadOperation = null;
+            }
+        }
         private void CancelAll(string urls)
         {
             // Save your stuff here
-            if(cts != null)
+            if (cancellationToken != null)
             {
-                cts.Cancel();
+                cancellationToken.Cancel();
             }
 
             // Now switch the button   

@@ -8,8 +8,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Windows.Networking.BackgroundTransfer;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.UI.Xaml;
@@ -19,7 +21,10 @@ namespace BJITUWPApp.ViewModels
 {
     class DownloadFileViewModel : INotifyPropertyChanged
     {
-        DownloadFileService _downloadFileService;
+        DownloadOperation downloadOperation;
+        CancellationTokenSource cancellationToken;
+        BackgroundDownloader backgroundDownloader = new BackgroundDownloader();
+        StorageFolder _folder;
 
         #region INotifyPropertyChanged_Implementation
         public event PropertyChangedEventHandler PropertyChanged;
@@ -29,13 +34,18 @@ namespace BJITUWPApp.ViewModels
                 PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
         }
         #endregion
-
-        public DownloadFileViewModel()
-        {
-            _downloadFileService = new DownloadFileService();
+        public DownloadFileViewModel() {
             DownloadCmd = new DownloadCommand(Download);
             CancelCmd = new DownloadCommand(Cancel);
             OpenCmd = new DownloadCommand(Open);
+        }
+        public DownloadFileViewModel(StorageFolder folder)
+        {
+            //_downloadFileService = new DownloadFileService();
+            DownloadCmd = new DownloadCommand(Download);
+            CancelCmd = new DownloadCommand(Cancel);
+            OpenCmd = new DownloadCommand(Open);
+            _folder = folder;
         }
         private StorageFile downloadedFile;
 
@@ -68,8 +78,18 @@ namespace BJITUWPApp.ViewModels
             get { return url; }
             set { url = value; OnPropertyChanged("Url"); }
         }
+        private int currentProgress;
 
-      
+        public int CurrentProgress
+        {
+            get { return currentProgress; }
+            set
+            {
+                currentProgress = value;
+                OnPropertyChanged("CurrentProgress");
+            }
+        }
+
         private string _ButtonText;
         public string ButtonText
         {
@@ -91,15 +111,7 @@ namespace BJITUWPApp.ViewModels
                 OnPropertyChanged("ButtonClickCommand");
             }
         }
-        //public async Task DownloadAll(string urls)
-        //{
-        //    String[] urlList = urls.Split(',');
-        //    //DownloadFileViewModel _viewModel = new DownloadFileViewModel();
-        //    foreach (var url in urlList)
-        //    {
-        //         Download(url);
-        //    }
-        //}
+       
         public ICommand DownloadCmd
         {
             get;
@@ -115,45 +127,70 @@ namespace BJITUWPApp.ViewModels
             get;
             private set;
         }
-       
+        
         private async void Download(string url)
         {
             ButtonText = "Cancel";
             ButtonClickCommand = CancelCmd;
 
-            var fileName = Helper.GetFileName(url);
-            string fileExtension = url.Substring(url.LastIndexOf('.'));
-            FolderPicker folderPicker = new FolderPicker();
-            folderPicker.SuggestedStartLocation = PickerLocationId.Downloads;
-            folderPicker.ViewMode = PickerViewMode.List;
-            folderPicker.FileTypeFilter.Add("*");
-            StorageFolder folder = await folderPicker.PickSingleFolderAsync();
-            //ProgressBar.Visibility = Visibility.Visible;
-            StorageFile file = await _downloadFileService.Download(url, fileName, fileExtension, folder);
-            if (file != null)
+            if(_folder == null)
             {
-                downloadedFile = file;
-                localFilePath = folder.Path;
-                ButtonText = "Open";
-                ButtonClickCommand = OpenCmd;
+                FolderPicker folderPicker = new FolderPicker();
+                folderPicker.SuggestedStartLocation = PickerLocationId.Downloads;
+                folderPicker.ViewMode = PickerViewMode.Thumbnail;
+                folderPicker.FileTypeFilter.Add("*");
+                _folder = await folderPicker.PickSingleFolderAsync();
+            }
+            var fileName = Helper.GetFileName(url);
+            
+            if (_folder != null)
+            {
+                StorageFile file = await _folder.CreateFileAsync(fileName, CreationCollisionOption.GenerateUniqueName);
+                downloadOperation = backgroundDownloader.CreateDownload(new Uri(url), file);
+                Progress<DownloadOperation> progress = new Progress<DownloadOperation>(progressChanged);
+                cancellationToken = new CancellationTokenSource();
+              
+                try
+                {
+                    await downloadOperation.StartAsync().AsTask(cancellationToken.Token, progress);
+                }
+                catch (TaskCanceledException)
+                {
+                    downloadOperation = null;
+                }
             }
         }
-        
+        private void progressChanged(DownloadOperation downloadOperation)
+        {
+            int progress = (int)(100 * ((double)downloadOperation.Progress.BytesReceived / (double)downloadOperation.Progress.TotalBytesToReceive));
+            CurrentProgress = progress;
+
+            if (progress >= 100)
+            {
+                downloadedFile = (StorageFile)downloadOperation.ResultFile;
+                localFilePath = downloadedFile.Path;
+                ButtonText = "Open";
+                ButtonClickCommand = OpenCmd;
+                downloadOperation = null;
+            }
+
+        }
+
         private async void Open(string url)
         {
             await Windows.System.Launcher.LaunchFileAsync(downloadedFile);
-            // Now switch the button   
-            //ButtonText = "Download";
-            //ButtonClickCommand = DownloadCmd;
         }
         private void Cancel(string url)
         {
-            // Save your stuff here
+            cancellationToken.Cancel();
+            cancellationToken.Dispose();
+            CurrentProgress = 0;
 
             // Now switch the button   
             ButtonText = "Download";
             ButtonClickCommand = DownloadCmd;
         }
+
 
     }
 }
