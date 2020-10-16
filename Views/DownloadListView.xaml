@@ -86,10 +86,13 @@
                             <RowDefinition Height="auto" />
                             <RowDefinition Height="auto" />
                             <RowDefinition Height="auto" />
+                            <!--<RowDefinition Height="auto" />-->
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Column="0" Grid.Row="1" Text="{Binding FileName}"/>
                         <TextBlock x:Name="url" Grid.Column="2" Grid.Row="2" Text="{Binding Url}" Visibility="Collapsed" x:DefaultBindMode="TwoWay"/>
-                        <Button Grid.Column="3" Grid.Row="0" Content="{Binding ButtonText}" Command="{Binding ButtonClickCommand}" CommandParameter="{Binding Url}" x:DefaultBindMode="TwoWay" />
+                        <ProgressBar  Grid.Row="0"
+                  Grid.Column="3" Minimum="0" Maximum="0" Value="{Binding CurrentProgress}" Height="20px"/>
+                        <Button Grid.Column="4" Grid.Row="0" Content="{Binding ButtonText}" Command="{Binding ButtonClickCommand}" CommandParameter="{Binding Url}" x:DefaultBindMode="TwoWay" />
                     </Grid>
                 </DataTemplate>
             </GridView.ItemTemplate>
